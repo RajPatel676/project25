@@ -57,11 +57,11 @@ a:focus {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #ff6b6b;
+  background: #ff8c00;
   border: 2px solid #1a1a1a;
   border-radius: 0;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #ff5252;
+  background: #ff7a00;
 }
