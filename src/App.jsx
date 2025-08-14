@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react'
 import './App.css'
 
 function App() {
-  // Core states
-  const [viewMode, setViewMode] = useState('Web') // 'Web' or 'App'
+  // Core app states
+  const [viewMode, setViewMode] = useState('Web')
   const [currentPage, setCurrentPage] = useState('Home')
   const [isLoading, setIsLoading] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [zoomLevel, setZoomLevel] = useState(100)
   const [isDarkMode, setIsDarkMode] = useState(false)
-  const [activeTab, setActiveTab] = useState('preview') // 'preview' or 'code'
+  const [activeTab, setActiveTab] = useState('preview')
   const [selectedPlatform, setSelectedPlatform] = useState('Web')
   
   // Generated content
@@ -28,28 +28,8 @@ function App() {
   const [designDescription, setDesignDescription] = useState('')
   const [generatedDesign, setGeneratedDesign] = useState(null)
   const [projectHistory, setProjectHistory] = useState([])
-  
-  // Stitch AI Workflow System States
-  const [currentWorkflow, setCurrentWorkflow] = useState('planning') // planning, designing, preview, export
-  const [screenPlans, setScreenPlans] = useState([])
-  const [currentScreen, setCurrentScreen] = useState(0)
-  const [designComponents, setDesignComponents] = useState([])
-  const [designTheme, setDesignTheme] = useState({
-    primaryColor: '#3B82F6',
-    secondaryColor: '#8B5CF6',
-    backgroundColor: '#1F2937',
-    textColor: '#F9FAFB',
-    accentColor: '#10B981',
-    borderRadius: '8px',
-    fontFamily: 'Inter'
-  })
-  const [componentLibrary, setComponentLibrary] = useState({
-    buttons: [],
-    inputs: [],
-    cards: [],
-    navigation: [],
-    layouts: []
-  })
+  const [activeSection, setActiveSection] = useState('dashboard')
+  const [showTemplates, setShowTemplates] = useState(false)
   
   const GEMINI_API_KEY = 'AIzaSyBlX_L1gawWBjMf2hV9Mx0qQUVItAFMjE4'
   
@@ -93,142 +73,9 @@ function App() {
     setIsGenerating(true)
   }
   
-  // Stitch AI Workflow Functions
-  const generateScreenPlan = async (prompt) => {
-    try {
-      const screenPlanningPrompt = `
-        Based on this app description: "${prompt}"
-        
-        Create a comprehensive screen plan with:
-        1. List of all necessary screens
-        2. Purpose of each screen
-        3. Key components needed
-        4. User flow between screens
-        
-        Format as JSON with structure:
-        {
-          "screens": [
-            {
-              "name": "Screen Name",
-              "purpose": "Screen purpose",
-              "components": ["component1", "component2"],
-              "userFlow": "next screen"
-            }
-          ]
-        }
-      `
-      
-      const response = await callGeminiAPI(screenPlanningPrompt)
-      const plan = JSON.parse(response)
-      setScreenPlans(plan.screens)
-      setCurrentWorkflow('designing')
-      return plan
-    } catch (error) {
-      console.error('Error generating screen plan:', error)
-      // Fallback to default screens
-      const defaultScreens = [
-        { name: 'Home', purpose: 'Main landing page', components: ['header', 'hero', 'features'], userFlow: 'login' },
-        { name: 'Login', purpose: 'User authentication', components: ['form', 'buttons', 'links'], userFlow: 'dashboard' },
-        { name: 'Dashboard', purpose: 'Main app interface', components: ['navigation', 'content', 'sidebar'], userFlow: 'home' }
-      ]
-      setScreenPlans(defaultScreens)
-      setCurrentWorkflow('designing')
-      return { screens: defaultScreens }
-    }
-  }
-  
-  const generateComponentDesign = async (screen, components) => {
-    try {
-      const componentPrompt = `
-        Design UI components for ${screen.name} screen with these requirements:
-        - Components: ${components.join(', ')}
-        - Theme: ${JSON.stringify(designTheme)}
-        - Platform: ${selectedPlatform}
-        
-        Generate modern, professional UI components with:
-        - Proper spacing and alignment
-        - Accessibility considerations
-        - Responsive design principles
-        - Professional styling
-        
-        Return as JSON with component specifications.
-      `
-      
-      const response = await callGeminiAPI(componentPrompt)
-      const componentSpecs = JSON.parse(response)
-      setDesignComponents(prev => [...prev, { screen: screen.name, components: componentSpecs }])
-      return componentSpecs
-    } catch (error) {
-      console.error('Error generating components:', error)
-      return null
-    }
-  }
-  
-  const applyDesignTheme = (components, theme) => {
-    return components.map(component => ({
-      ...component,
-      styles: {
-        ...component.styles,
-        backgroundColor: theme.backgroundColor,
-        color: theme.textColor,
-        borderColor: theme.primaryColor,
-        borderRadius: theme.borderRadius,
-        fontFamily: theme.fontFamily
-      }
-    }))
-  }
-  
-  const generateDesignPreview = async () => {
-    try {
-      const previewPrompt = `
-        Create a complete design preview for this app:
-        - Screens: ${screenPlans.map(s => s.name).join(', ')}
-        - Theme: ${JSON.stringify(designTheme)}
-        - Platform: ${selectedPlatform}
-        
-        Generate a professional, polished design that looks like:
-        - High-quality Figma mockup
-        - Dribbble-quality UI design
-        - Real, usable application interface
-        
-        Focus on visual design, not code.
-      `
-      
-      const response = await callGeminiAPI(previewPrompt)
-      setGeneratedDesign(response)
-      setCurrentWorkflow('preview')
-      return response
-    } catch (error) {
-      console.error('Error generating preview:', error)
-      return null
-    }
-  }
-  
-  const exportDesign = (format) => {
-    // Export functionality for different formats
-    const exportData = {
-      screens: screenPlans,
-      components: designComponents,
-      theme: designTheme,
-      platform: selectedPlatform,
-      timestamp: new Date().toISOString()
-    }
-    
-    if (format === 'json') {
-      const dataStr = JSON.stringify(exportData, null, 2)
-      const dataBlob = new Blob([dataStr], { type: 'application/json' })
-      const url = URL.createObjectURL(dataBlob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `design-export-${Date.now()}.json`
-      link.click()
-    }
-    
-    setCurrentWorkflow('export')
-  }
-  
   const pages = ['Home', 'Features', 'Pricing', 'About', 'Contact', 'Login', 'Signup', 'Dashboard']
 
+  // Enhanced zoom and pan functionality
   const handleZoomIn = () => {
     setZoomLevel(prev => Math.min(prev + 25, 200))
   }
@@ -298,8 +145,6 @@ function App() {
     setPanOffset({ x: 0, y: 0 })
   }
 
-
-
   // Prevent all website zoom and only allow preview zoom
   useEffect(() => {
     const preventGlobalZoom = (e) => {
@@ -361,59 +206,13 @@ function App() {
     }
   }
 
-  const recentProjects = [
-    {
-      title: "Login",
-      subtitle: "Mobile",
-      type: "mobile",
-      date: "Yesterday"
-    },
-    {
-      title: "Home Page",
-      subtitle: "Web",
-      type: "web",
-      date: "Last 7 days"
-    },
-    {
-      title: "Login",
-      subtitle: "Mobile",
-      type: "mobile",
-      date: "Last 7 days"
-    },
-    {
-      title: "CrickPro is a cricket scoreboard app with a futuristic and animated UI, similar to...",
-      subtitle: "Mobile",
-      type: "mobile",
-      date: "This year"
-    },
-    {
-      title: "Futuristic music streaming app design inspired by Spotify, called 'Stitch Music'. T...",
-      subtitle: "Mobile",
-      type: "mobile",
-      date: "This year"
-    },
-    {
-      title: "New design",
-      subtitle: "Mobile",
-      type: "mobile",
-      date: "This year"
-    }
-  ]
-
-  const examples = [
-    {
-      title: "Indoor Plant Care Dashboard",
-      subtitle: "Web"
-    },
-    {
-      title: "Abs skiing guide",
-      subtitle: "Mobile"
-    }
-  ]
-
-  const prompts = [
-    "A bronze tab for a mobile app for romance and date night ideas",
-    "The user profile page for a guided meditation and mindfulness app"
+  // Quick templates for common design patterns
+  const quickTemplates = [
+    "Modern dashboard with dark theme and neon accents",
+    "Minimalist landing page with hero section",
+    "Mobile app interface with rounded corners",
+    "E-commerce product grid with hover effects",
+    "Social media feed with card-based layout"
   ]
 
   const callGeminiAPI = async (prompt, isFollowUp = false) => {
@@ -448,35 +247,21 @@ Format your response exactly like this:
 
 ## JavaScript
 \`\`\`javascript
-[JavaScript code here, or "// No JavaScript needed" if not required]
+[Complete JavaScript code here]
 \`\`\`
 
 Requirements:
 - Make it ${selectedPlatform === 'Mobile' ? 'mobile-first responsive' : 'desktop-focused with mobile compatibility'}
-- Use modern CSS (flexbox, grid, custom properties, gradients, shadows)
-- Include hover effects, smooth transitions, and micro-animations
-- Use a cohesive and modern color scheme with gradients
-- Make it visually stunning and user-friendly
-- Ensure proper accessibility (semantic HTML, ARIA labels)
-- Include realistic content and placeholder text
-- Use high-quality demo images from Unsplash (https://images.unsplash.com/photo-[id]?w=400&h=300&fit=crop)
-- Add loading states, skeleton screens, and interactive elements
-- Include icons using Unicode symbols or CSS-drawn icons
-- Make it production-ready with proper spacing, typography, and visual hierarchy
-- Add subtle animations and transitions for better UX
-- Use CSS variables for consistent theming
-- Include proper error states and empty states
-- Make it look like a real, professional application`
+- Use modern CSS features (Flexbox, Grid, CSS Variables)
+- Include smooth animations and transitions
+- Ensure accessibility standards
+- Optimize for performance`
       }
 
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 60000) // 60 second timeout
-
-      const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent', {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-goog-api-key': GEMINI_API_KEY
         },
         body: JSON.stringify({
           contents: [{
@@ -484,11 +269,8 @@ Requirements:
               text: apiPrompt
             }]
           }]
-        }),
-        signal: controller.signal
+        })
       })
-
-      clearTimeout(timeoutId)
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
@@ -498,122 +280,55 @@ Requirements:
       return data.candidates[0].content.parts[0].text
     } catch (error) {
       console.error('Error calling Gemini API:', error)
-      return 'Sorry, I encountered an error while generating the design. Please try again.'
+      throw error
     }
   }
 
-    const handleGenerate = async () => {
+  const handleGenerate = async () => {
     if (designDescription.trim()) {
       setIsGenerating(true)
       setIsLoading(true)
       
-      try {
-        // Step 1: Generate Screen Plan
-        const screenPlan = await generateScreenPlan(designDescription)
-        
-        // Step 2: Generate Components for each screen
-        for (const screen of screenPlan.screens) {
-          await generateComponentDesign(screen, screen.components)
-        }
-        
-        // Step 3: Generate Design Preview
-        const preview = await generateDesignPreview()
-        
-        // Step 4: Generate Code
-        const aiResponse = await callGeminiAPI(designDescription)
-        const parsedCode = parseGeneratedCode(aiResponse)
-        setGeneratedCode(parsedCode)
-        
-        // Save project to history
-        saveProject(designDescription, selectedPlatform, parsedCode)
-        
-        // Update chat with workflow progress
-        const workflowMessages = [
-          {
-            id: 1,
-            type: 'user',
-            content: designDescription,
-            timestamp: new Date()
-          },
-          {
-            id: 2,
-            type: 'ai',
-            content: `✅ Screen Planning Complete: ${screenPlan.screens.length} screens identified`,
-            timestamp: new Date()
-          },
-          {
-            id: 3,
-            type: 'ai',
-            content: `✅ Component Design Complete: All UI components generated`,
-            timestamp: new Date()
-          },
-          {
-            id: 4,
-            type: 'ai',
-            content: `✅ Design Preview Generated: Professional mockup ready`,
-            timestamp: new Date()
-          },
-          {
-            id: 5,
-            type: 'ai',
-            content: `✅ Code Generation Complete: Frontend code ready for development`,
-            timestamp: new Date()
-          }
-        ]
-        setChatMessages(workflowMessages)
-        setGeneratedDesign(preview)
-        
-      } catch (error) {
-        console.error('Error in Stitch AI workflow:', error)
-        setChatMessages([{
+      // Add initial message to chat
+      const initialMessages = [
+        {
           id: 1,
-          type: 'ai',
-          content: 'Sorry, there was an error in the design generation process. Please try again.',
+          type: 'user',
+          content: designDescription,
           timestamp: new Date()
-        }])
-      } finally {
-        setIsLoading(false)
-        // Auto-scroll to bottom
-        setTimeout(() => {
-          const chatContainer = document.querySelector('.chat-messages')
-          if (chatContainer) {
-            chatContainer.scrollTop = chatContainer.scrollHeight
+        },
+        {
+          id: 2,
+          type: 'ai',
+          content: 'I\'ll create a design based on your description. Let me generate some options for you...',
+          timestamp: new Date()
         }
-        }, 100)
-      }
-    }
-  }
+      ]
+      setChatMessages(initialMessages)
 
-  const handleSendMessage = async () => {
-    if (chatInput.trim()) {
-      const newMessage = {
-        id: chatMessages.length + 1,
-        type: 'user',
-        content: chatInput,
-        timestamp: new Date()
-      }
-      const updatedMessages = [...chatMessages, newMessage]
-      setChatMessages(updatedMessages)
-      setChatInput('')
-      setIsLoading(true)
-      
-      // Call Gemini API with context
-      const aiResponse = await callGeminiAPI(chatInput, true)
+      // Call Gemini API
+      const aiResponse = await callGeminiAPI(designDescription)
       setIsLoading(false)
       
-      // Check if the response contains code and update if so
+      // Parse the generated code
       const parsedCode = parseGeneratedCode(aiResponse)
-      if (parsedCode.html || parsedCode.css || parsedCode.js) {
-        setGeneratedCode(parsedCode)
-      }
+      setGeneratedCode(parsedCode)
       
-      const aiMessage = {
-        id: chatMessages.length + 2,
-        type: 'ai',
-        content: aiResponse,
-        timestamp: new Date()
-      }
-      setChatMessages(prev => [...prev, aiMessage])
+      // Save project to history
+      saveProject(designDescription, selectedPlatform, parsedCode)
+      
+      // Update chat with AI response
+      const updatedMessages = [
+        ...initialMessages,
+        {
+          id: 3,
+          type: 'ai',
+          content: aiResponse,
+          timestamp: new Date()
+        }
+      ]
+      setChatMessages(updatedMessages)
+      setGeneratedDesign(aiResponse)
       
       // Auto-scroll to bottom
       setTimeout(() => {
@@ -625,34 +340,80 @@ Requirements:
     }
   }
 
+  const handleSendMessage = async () => {
+    if (chatInput.trim() && generatedCode.html) {
+      const userMessage = {
+        id: Date.now(),
+        type: 'user',
+        content: chatInput,
+        timestamp: new Date()
+      }
+      
+      setChatMessages(prev => [...prev, userMessage])
+      setChatInput('')
+      
+      try {
+        const aiResponse = await callGeminiAPI(chatInput, true)
+        const parsedCode = parseGeneratedCode(aiResponse)
+        setGeneratedCode(parsedCode)
+        
+        const aiMessage = {
+          id: Date.now() + 1,
+          type: 'ai',
+          content: aiResponse,
+          timestamp: new Date()
+        }
+        
+        setChatMessages(prev => [...prev, aiMessage])
+      } catch (error) {
+        console.error('Error in follow-up:', error)
+      }
+    }
+  }
+
+  const handleTemplateSelect = (template) => {
+    setDesignDescription(template)
+    setShowTemplates(false)
+  }
+
   return (
     <div className="app">
-      {/* Header */}
+      {/* Enhanced Header */}
       <header className="header">
         <div className="header-left">
-          <div className="search-container">
-            <svg className="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2"/>
-              <path d="m21 21-4.35-4.35" stroke="currentColor" strokeWidth="2"/>
-            </svg>
-            <input type="text" placeholder="Search designs" className="search-input" />
-          </div>
-        </div>
-        
-        <div className="header-center">
           <div className="logo">
-            <span className="logo-text">Stitch</span>
+            <div className="logo-icon">✨</div>
+            <span className="logo-text">Stitch AI</span>
             <span className="beta-badge">BETA</span>
           </div>
         </div>
         
+        <div className="header-center">
+          <div className="app-navigation">
+            <button 
+              className={`nav-btn ${activeSection === 'dashboard' ? 'active' : ''}`}
+              onClick={() => setActiveSection('dashboard')}
+            >
+              Dashboard
+            </button>
+            <button 
+              className={`nav-btn ${activeSection === 'projects' ? 'active' : ''}`}
+              onClick={() => setActiveSection('projects')}
+            >
+              Projects
+            </button>
+            <button 
+              className={`nav-btn ${activeSection === 'templates' ? 'active' : ''}`}
+              onClick={() => setActiveSection('templates')}
+            >
+              Templates
+            </button>
+          </div>
+        </div>
+        
         <div className="header-right">
-          <button className="menu-button">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="1" fill="currentColor"/>
-              <circle cx="19" cy="12" r="1" fill="currentColor"/>
-              <circle cx="5" cy="12" r="1" fill="currentColor"/>
-            </svg>
+          <button className="theme-toggle" onClick={() => setIsDarkMode(!isDarkMode)}>
+            {isDarkMode ? '☀️' : '🌙'}
           </button>
           <div className="profile-avatar">
             <span>A</span>
@@ -661,7 +422,7 @@ Requirements:
       </header>
 
       <div className={`main-container ${isGenerating ? 'generating' : ''}`}>
-        {/* Sidebar - only show when not generating */}
+        {/* Enhanced Sidebar */}
         {!isGenerating && (
           <aside className="sidebar">
             {projectHistory.length > 0 ? (
@@ -689,6 +450,22 @@ Requirements:
                 <p className="sidebar-empty-text">Create your first design to see it here!</p>
               </div>
             )}
+            
+            {/* Quick Templates Section */}
+            <div className="sidebar-section">
+              <h3 className="sidebar-title">Quick Templates</h3>
+              <div className="template-grid">
+                {quickTemplates.map((template, index) => (
+                  <button 
+                    key={index}
+                    className="template-btn"
+                    onClick={() => handleTemplateSelect(template)}
+                  >
+                    {template}
+                  </button>
+                ))}
+              </div>
+            </div>
           </aside>
         )}
 
@@ -696,373 +473,284 @@ Requirements:
         <main className="main-content">
           {!isGenerating ? (
             <div className="design-creator">
-              <div className="creator-header">
-                <h1 className="creator-title">Start a new design in</h1>
-                <div className="mode-selector">
-                  <span>Standard mode</span>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2"/>
-                  </svg>
+              {/* Hero Section */}
+              <div className="hero-section">
+                <div className="hero-content">
+                  <div className="hero-badge">
+                    <span className="badge-icon">🚀</span>
+                    <span>AI-Powered Design</span>
+                  </div>
+                  <h1 className="hero-title">
+                    Transform Ideas Into
+                    <span className="gradient-text"> Stunning Designs</span>
+                  </h1>
+                  <p className="hero-subtitle">
+                    Create professional, modern, and futuristic UI designs in seconds with our advanced AI design engine
+                  </p>
+                  <div className="hero-stats">
+                    <div className="stat-item">
+                      <span className="stat-number">10K+</span>
+                      <span className="stat-label">Designs Created</span>
+                    </div>
+                    <div className="stat-item">
+                      <span className="stat-number">50+</span>
+                      <span className="stat-label">Templates</span>
+                    </div>
+                    <div className="stat-item">
+                      <span className="stat-number">99%</span>
+                      <span className="stat-label">Satisfaction</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="design-input-container">
-                <textarea
-                  className="design-input"
-                  placeholder="Describe your design (e.g., 'A modern fitness app with dark theme, tracking features, and social elements')"
-                  value={designDescription}
-                  onChange={(e) => setDesignDescription(e.target.value)}
-                />
-                
-                {/* Stitch AI Workflow Progress */}
-                {currentWorkflow !== 'planning' && (
-                  <div className="workflow-progress">
-                    <div className="workflow-step active">
-                      <div className="step-icon">📋</div>
-                      <span>Screen Planning</span>
-                    </div>
-                    <div className={`workflow-step ${currentWorkflow === 'designing' || currentWorkflow === 'preview' || currentWorkflow === 'export' ? 'active' : ''}`}>
-                      <div className="step-icon">🎨</div>
-                      <span>Component Design</span>
-                    </div>
-                    <div className={`workflow-step ${currentWorkflow === 'preview' || currentWorkflow === 'export' ? 'active' : ''}`}>
-                      <div className="step-icon">👁️</div>
-                      <span>Preview</span>
-                    </div>
-                    <div className={`workflow-step ${currentWorkflow === 'export' ? 'active' : ''}`}>
-                      <div className="step-icon">📤</div>
-                      <span>Export</span>
-                    </div>
-                  </div>
-                )}
-                
-                <div className="input-footer">
-                  <div className="platform-selector">
-                    <button 
-                      className={`platform-btn ${selectedPlatform === 'Mobile' ? 'active' : ''}`}
-                      onClick={() => setSelectedPlatform('Mobile')}
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <rect x="5" y="2" width="14" height="20" rx="2" ry="2" stroke="currentColor" strokeWidth="2"/>
-                        <line x1="12" y1="18" x2="12.01" y2="18" stroke="currentColor" strokeWidth="2"/>
-                      </svg>
-                      Mobile
-                    </button>
-                    <button 
-                      className={`platform-btn ${selectedPlatform === 'Web' ? 'active' : ''}`}
-                      onClick={() => setSelectedPlatform('Web')}
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2" stroke="currentColor" strokeWidth="2"/>
-                        <line x1="8" y1="21" x2="16" y2="21" stroke="currentColor" strokeWidth="2"/>
-                        <line x1="12" y1="17" x2="12" y2="21" stroke="currentColor" strokeWidth="2"/>
-                      </svg>
-                      Web
-                    </button>
-                  </div>
-                  
-                  <button className="generate-btn" onClick={handleGenerate}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="currentColor" strokeWidth="2"/>
-                    </svg>
-                    Generate with Stitch AI
-                  </button>
+              {/* Design Input Section */}
+              <div className="design-input-section">
+                <div className="section-header">
+                  <h2 className="section-title">Start Creating</h2>
+                  <p className="section-subtitle">Describe your vision and watch it come to life</p>
                 </div>
-              </div>
-              
-              {/* Theme Customization Panel */}
-              <div className="theme-panel">
-                <h3 className="theme-title">Design Theme</h3>
-                <div className="theme-controls">
-                  <div className="theme-control">
-                    <label>Primary Color</label>
-                    <input 
-                      type="color" 
-                      value={designTheme.primaryColor}
-                      onChange={(e) => setDesignTheme(prev => ({ ...prev, primaryColor: e.target.value }))}
-                    />
-                  </div>
-                  <div className="theme-control">
-                    <label>Background</label>
-                    <input 
-                      type="color" 
-                      value={designTheme.backgroundColor}
-                      onChange={(e) => setDesignTheme(prev => ({ ...prev, backgroundColor: e.target.value }))}
-                    />
-                  </div>
-                  <div className="theme-control">
-                    <label>Border Radius</label>
-                    <select 
-                      value={designTheme.borderRadius}
-                      onChange={(e) => setDesignTheme(prev => ({ ...prev, borderRadius: e.target.value }))}
-                    >
-                      <option value="4px">Sharp</option>
-                      <option value="8px">Rounded</option>
-                      <option value="16px">Pill</option>
-                      <option value="24px">Extra Rounded</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Screen Planning Visualization */}
-              {screenPlans.length > 0 && (
-                <div className="screen-planning-panel">
-                  <h3 className="screen-planning-title">Screen Plan</h3>
-                  <div className="screen-grid">
-                    {screenPlans.map((screen, index) => (
-                      <div key={index} className="screen-card">
-                        <div className="screen-header">
-                          <h4 className="screen-name">{screen.name}</h4>
-                          <span className="screen-number">{index + 1}</span>
-                        </div>
-                        <p className="screen-purpose">{screen.purpose}</p>
-                        <div className="screen-components">
-                          <span className="components-label">Components:</span>
-                          <div className="component-tags">
-                            {screen.components.map((comp, compIndex) => (
-                              <span key={compIndex} className="component-tag">{comp}</span>
-                            ))}
-                          </div>
-                        </div>
-                        <div className="screen-flow">
-                          <span className="flow-label">Next:</span>
-                          <span className="flow-target">{screen.userFlow}</span>
-                        </div>
+                
+                <div className="design-input-container">
+                  <div className="input-wrapper">
+                    <div className="input-header">
+                      <div className="input-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                          <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="currentColor" strokeWidth="2"/>
+                          <path d="m2 17 10 5 10-5" stroke="currentColor" strokeWidth="2"/>
+                          <path d="m2 12 10 5 10-5" stroke="currentColor" strokeWidth="2"/>
+                        </svg>
                       </div>
+                      <textarea
+                        className="design-input"
+                        placeholder="Describe your design vision... (e.g., 'A futuristic dashboard for a smart home app with dark theme and neon accents')"
+                        value={designDescription}
+                        onChange={(e) => setDesignDescription(e.target.value)}
+                        rows={4}
+                      />
+                      <div className="input-counter">
+                        {designDescription.length}/500
+                      </div>
+                    </div>
+                    
+                    <div className="input-footer">
+                      <div className="platform-selector">
+                        <button 
+                          className={`platform-btn ${selectedPlatform === 'Mobile' ? 'active' : ''}`}
+                          onClick={() => setSelectedPlatform('Mobile')}
+                        >
+                          <div className="platform-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                              <rect x="5" y="2" width="14" height="20" rx="2" ry="2" stroke="currentColor" strokeWidth="2"/>
+                              <line x1="12" y1="18" x2="12.01" y2="18" stroke="currentColor" strokeWidth="2"/>
+                            </svg>
+                          </div>
+                          <span>Mobile</span>
+                          <div className="platform-indicator"></div>
+                        </button>
+                        <button 
+                          className={`platform-btn ${selectedPlatform === 'Web' ? 'active' : ''}`}
+                          onClick={() => setSelectedPlatform('Web')}
+                        >
+                          <div className="platform-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                              <rect x="2" y="3" width="20" height="14" rx="2" ry="2" stroke="currentColor" strokeWidth="2"/>
+                              <line x1="8" y1="21" x2="16" y2="21" stroke="currentColor" strokeWidth="2"/>
+                              <line x1="12" y1="17" x2="12" y2="21" stroke="currentColor" strokeWidth="2"/>
+                            </svg>
+                          </div>
+                          <span>Web</span>
+                          <div className="platform-indicator"></div>
+                        </button>
+                      </div>
+                      
+                      <button className="generate-btn" onClick={handleGenerate} disabled={isLoading}>
+                        <div className="btn-content">
+                          {isLoading ? (
+                            <div className="loading-spinner"></div>
+                          ) : (
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="currentColor" strokeWidth="2"/>
+                            </svg>
+                          )}
+                          <span>{isLoading ? 'Generating...' : 'Generate Design'}</span>
+                        </div>
+                        <div className="btn-glow"></div>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Prompts */}
+                <div className="prompts-section">
+                  <h3 className="prompts-title">Popular Prompts</h3>
+                  <div className="prompt-grid">
+                    {quickTemplates.map((prompt, index) => (
+                      <button 
+                        key={index} 
+                        className="prompt-card"
+                        onClick={() => setDesignDescription(prompt)}
+                      >
+                        <div className="prompt-icon">💡</div>
+                        <p className="prompt-text">{prompt}</p>
+                        <div className="prompt-arrow">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                            <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2"/>
+                          </svg>
+                        </div>
+                      </button>
                     ))}
                   </div>
                 </div>
-              )}
+              </div>
 
-              <div className="prompts-section">
-                <h3 className="prompts-title">Try these prompts</h3>
-                <div className="prompt-buttons">
-                  {prompts.map((prompt, index) => (
-                    <button 
-                      key={index} 
-                      className="prompt-btn"
-                      onClick={() => setDesignDescription(prompt)}
-                    >
-                      {prompt}
-                    </button>
-                  ))}
+              {/* Features Section */}
+              <div className="features-section">
+                <div className="section-header">
+                  <h2 className="section-title">Why Choose Stitch?</h2>
+                  <p className="section-subtitle">Built for modern designers and developers</p>
+                </div>
+                
+                <div className="features-grid">
+                  <div className="feature-card">
+                    <div className="feature-icon">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="currentColor" strokeWidth="2"/>
+                        <path d="m2 17 10 5 10-5" stroke="currentColor" strokeWidth="2"/>
+                        <path d="m2 12 10 5 10-5" stroke="currentColor" strokeWidth="2"/>
+                      </svg>
+                    </div>
+                    <h3 className="feature-title">AI-Powered</h3>
+                    <p className="feature-description">Advanced machine learning algorithms that understand design principles and user experience</p>
+                  </div>
+                  
+                  <div className="feature-card">
+                    <div className="feature-icon">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" strokeWidth="2"/>
+                        <circle cx="9" cy="9" r="2" stroke="currentColor" strokeWidth="2"/>
+                        <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" stroke="currentColor" strokeWidth="2"/>
+                      </svg>
+                    </div>
+                    <h3 className="feature-title">Production Ready</h3>
+                    <p className="feature-description">Clean, semantic code that's ready for development teams to implement</p>
+                  </div>
+                  
+                  <div className="feature-card">
+                    <div className="feature-icon">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 2v20M2 12h20" stroke="currentColor" strokeWidth="2"/>
+                      </svg>
+                    </div>
+                    <h3 className="feature-title">Responsive</h3>
+                    <p className="feature-description">Automatically optimized for all devices and screen sizes</p>
+                  </div>
                 </div>
               </div>
             </div>
           ) : (
             <div className="generation-interface">
-              {/* Chat Panel */}
+              {/* Enhanced Chat Panel */}
               <div className="chat-panel">
                 <div className="chat-header">
-                  <div className="chat-title">
-                    <div className="chat-avatar">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="currentColor" strokeWidth="2"/>
-                        <path d="m2 17 10 5 10-5" stroke="currentColor" strokeWidth="2"/>
-                        <path d="m2 12 10 5 10-5" stroke="currentColor" strokeWidth="2"/>
-                      </svg>
-                      <span>Stitch</span>
-                    </div>
-                  </div>
+                  <h2>Design Assistant</h2>
                   <button className="close-chat" onClick={() => setIsGenerating(false)}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <path d="M18 6L6 18" stroke="currentColor" strokeWidth="2"/>
-                      <path d="M6 6l12 12" stroke="currentColor" strokeWidth="2"/>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                      <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2"/>
                     </svg>
                   </button>
                 </div>
-
+                
                 <div className="chat-messages">
                   {chatMessages.map((message) => (
                     <div key={message.id} className={`message ${message.type}`}>
-                      <div className="message-content">
-                        {message.content}
+                      <div className="message-content">{message.content}</div>
+                      <div className="message-time">
+                        {message.timestamp.toLocaleTimeString()}
                       </div>
                     </div>
                   ))}
-                  {isLoading && (
-                    <div className="message ai">
-                      <div className="message-content loading">
-                        Thinking...
-                      </div>
-                    </div>
-                  )}
                 </div>
-
+                
                 <div className="chat-input-container">
                   <input
                     type="text"
-                    placeholder="Describe your design"
+                    className="chat-input"
+                    placeholder="Ask for modifications or improvements..."
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                    className="chat-input"
                   />
-                  <button onClick={handleSendMessage} className="send-button">
+                  <button className="send-btn" onClick={handleSendMessage}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <path d="M22 2L11 13" stroke="currentColor" strokeWidth="2"/>
-                      <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" strokeWidth="2"/>
+                      <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" strokeWidth="2"/>
                     </svg>
                   </button>
                 </div>
-
-                <div className="chat-footer">
-                  <span>Stitch can make mistakes. Please check its work.</span>
-                </div>
               </div>
 
-              {/* Design Output Panel */}
-              <div className="output-panel">
-                <div 
-                  className="stitch-viewport" 
-                  onWheel={handleWheel}
-                  onMouseDown={handleMouseDown}
-                  onMouseMove={handleMouseMove}
-                  onMouseUp={handleMouseUp}
-                  onMouseLeave={handleMouseUp}
-                >
-                  <div className="viewport-background">
-                    <div className="grid-pattern"></div>
+              {/* Enhanced Preview Panel */}
+              <div className="preview-panel">
+                <div className="preview-header">
+                  <div className="preview-controls">
+                    <button onClick={handleZoomOut} className="control-btn">-</button>
+                    <span className="zoom-level">{zoomLevel}%</span>
+                    <button onClick={handleZoomIn} className="control-btn">+</button>
+                    <button onClick={resetZoom} className="control-btn">Reset</button>
                   </div>
                   
-                  <div 
-                    className="viewport-content"
-                    style={{
-                      transform: `translate(${panOffset.x}px, ${panOffset.y}px)`
-                    }}
-                  >
-                    {isLoading ? (
-                      <div className="stitch-loading">
-                        <div className="loading-container">
-                          <div className="loading-dots">
-                            <div className="dot dot-1"></div>
-                            <div className="dot dot-2"></div>
-                            <div className="dot dot-3"></div>
-                            <div className="dot dot-4"></div>
-                          </div>
-                          <div className="loading-text">
-                            <div className="loading-title">Generating your design</div>
-                            <div className="loading-subtitle">This may take a few moments...</div>
-                          </div>
-                          <div className="loading-progress">
-                            <div className="progress-bar">
-                              <div className="progress-fill"></div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ) : generatedCode.html ? (
-                      <div className={`preview-container ${selectedPlatform.toLowerCase()}`}>
-                        <div className="preview-frame" style={{ transform: `scale(${zoomLevel / 100})` }}>
-                          <iframe
-                            srcDoc={`
-                              <!DOCTYPE html>
-                              <html lang="en">
-                              <head>
-                                <meta charset="UTF-8">
-                                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                                <title>Generated Design</title>
-                                <style>
-                                  * { margin: 0; padding: 0; box-sizing: border-box; }
-                                  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-                                  ${generatedCode.css}
-                                </style>
-                              </head>
-                              <body>
-                                ${generatedCode.html}
-                                <script>
-                                  ${generatedCode.js}
-                                </script>
-                              </body>
-                              </html>
-                            `}
-                            title="Design Preview"
-                            className="preview-iframe"
-                            sandbox="allow-scripts allow-same-origin"
-                          />
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="empty-preview">
-                        <div className="empty-icon">
-                          <svg width="80" height="80" viewBox="0 0 24 24" fill="none">
-                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" strokeWidth="1"/>
-                            <circle cx="9" cy="9" r="2" stroke="currentColor" strokeWidth="1"/>
-                            <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" stroke="currentColor" strokeWidth="1"/>
-                          </svg>
-                        </div>
-                        <div className="empty-text">
-                          <h3>Your design will appear here</h3>
-                          <p>Start by describing your design idea in the chat</p>
-                        </div>
-                      </div>
-                    )}
+                  <div className="platform-indicator">
+                    <button 
+                      className={`control-btn ${selectedPlatform === 'Mobile' ? 'active' : ''}`}
+                      onClick={() => setSelectedPlatform('Mobile')}
+                    >
+                      📱
+                    </button>
+                    <button 
+                      className={`control-btn ${selectedPlatform === 'Web' ? 'active' : ''}`}
+                      onClick={() => setSelectedPlatform('Web')}
+                    >
+                      💻
+                    </button>
                   </div>
-
-                  {/* Floating Controls */}
-                  <div className="floating-controls">
-                    <div className="control-group zoom-controls">
-                      <button className="control-btn zoom-out" title="Zoom Out" onClick={handleZoomOut}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                          <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2"/>
-                          <line x1="8" y1="11" x2="14" y2="11" stroke="currentColor" strokeWidth="2"/>
-                          <path d="m21 21-4.35-4.35" stroke="currentColor" strokeWidth="2"/>
-                        </svg>
-                      </button>
-                      <button className="zoom-level-btn" title="Reset Zoom" onClick={resetZoom}>
-                        {zoomLevel}%
-                      </button>
-                      <button className="control-btn zoom-in" title="Zoom In" onClick={handleZoomIn}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                          <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2"/>
-                          <line x1="11" y1="8" x2="11" y2="14" stroke="currentColor" strokeWidth="2"/>
-                          <line x1="8" y1="11" x2="14" y2="11" stroke="currentColor" strokeWidth="2"/>
-                          <path d="m21 21-4.35-4.35" stroke="currentColor" strokeWidth="2"/>
-                        </svg>
-                      </button>
+                </div>
+                
+                <div className="preview-container">
+                  {!generatedCode.html ? (
+                    <div className="preview-placeholder">
+                      <div className="placeholder-icon">🎨</div>
+                      <h3>Design Preview</h3>
+                      <p>Your generated design will appear here</p>
                     </div>
-
-                    <div className="control-group view-controls">
-                      <button 
-                        className={`control-btn ${selectedPlatform === 'Mobile' ? 'active' : ''}`}
-                        onClick={() => setSelectedPlatform('Mobile')}
-                        title="Mobile View"
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                          <rect x="5" y="2" width="14" height="20" rx="2" ry="2" stroke="currentColor" strokeWidth="2"/>
-                          <line x1="12" y1="18" x2="12.01" y2="18" stroke="currentColor" strokeWidth="2"/>
-                        </svg>
-                      </button>
-                      <button 
-                        className={`control-btn ${selectedPlatform === 'Web' ? 'active' : ''}`}
-                        onClick={() => setSelectedPlatform('Web')}
-                        title="Desktop View"
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                          <rect x="2" y="3" width="20" height="14" rx="2" ry="2" stroke="currentColor" strokeWidth="2"/>
-                          <line x1="8" y1="21" x2="16" y2="21" stroke="currentColor" strokeWidth="2"/>
-                          <line x1="12" y1="17" x2="12" y2="21" stroke="currentColor" strokeWidth="2"/>
-                        </svg>
-                      </button>
+                  ) : generatedCode.html ? (
+                    <div 
+                      className="preview-viewport"
+                      onMouseEnter={handleViewportEnter}
+                      onMouseLeave={handleViewportLeave}
+                      onWheel={handleWheel}
+                      onMouseDown={handleMouseDown}
+                      onMouseMove={handleMouseMove}
+                      onMouseUp={handleMouseUp}
+                      style={{
+                        transform: `scale(${zoomLevel / 100}) translate(${panOffset.x}px, ${panOffset.y}px)`
+                      }}
+                    >
+                      <iframe
+                        srcDoc={`
+                          <!DOCTYPE html>
+                          <html>
+                            <head>
+                              <style>${generatedCode.css}</style>
+                            </head>
+                            <body>${generatedCode.html}</body>
+                            <script>${generatedCode.js}</script>
+                          </html>
+                        `}
+                        title="Design Preview"
+                        className="preview-iframe"
+                      />
                     </div>
-
-                    <div className="control-group action-controls">
-                      <button className="control-btn" title="View Code">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                          <polyline points="16,18 22,12 16,6" stroke="currentColor" strokeWidth="2"/>
-                          <polyline points="8,6 2,12 8,18" stroke="currentColor" strokeWidth="2"/>
-                        </svg>
-                      </button>
-                      <button className="control-btn" title="Download">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" strokeWidth="2"/>
-                          <polyline points="7,10 12,15 17,10" stroke="currentColor" strokeWidth="2"/>
-                          <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" strokeWidth="2"/>
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
+                  ) : null}
                 </div>
               </div>
             </div>
