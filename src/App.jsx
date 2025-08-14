@@ -206,6 +206,26 @@ function App() {
     }
   }
 
+  const validateImageCount = (html, css) => {
+    // Count Unsplash images in HTML
+    const unsplashImages = html.match(/https:\/\/images\.unsplash\.com\/photo-[^"'\s]+/g) || []
+    const uniqueImages = [...new Set(unsplashImages)]
+    
+    if (uniqueImages.length < 4) {
+      return {
+        isValid: false,
+        message: `Warning: Only ${uniqueImages.length} unique images found. The design should include at least 4-6 different images for visual richness.`,
+        imageCount: uniqueImages.length
+      }
+    }
+    
+    return {
+      isValid: true,
+      message: `Great! Found ${uniqueImages.length} unique images in the design.`,
+      imageCount: uniqueImages.length
+    }
+  }
+
   const recentProjects = [
     {
       title: "Login",
@@ -265,8 +285,8 @@ function App() {
     try {
       let apiPrompt = ''
       
-      if (isFollowUp) {
-        apiPrompt = `Based on our previous conversation about the ${selectedPlatform.toLowerCase()} design, please respond to this follow-up: "${prompt}". If the user is asking for code modifications, provide the updated HTML, CSS, and JavaScript code in the same format as before.`
+              if (isFollowUp) {
+          apiPrompt = `Based on our previous conversation about the ${selectedPlatform.toLowerCase()} design, please respond to this follow-up: "${prompt}". If the user is asking for code modifications, provide the updated HTML, CSS, and JavaScript code in the same format as before. Remember to maintain the multiple high-quality images from Unsplash throughout the design - include at least 4-6 different images with unique photo IDs.`
       } else {
         apiPrompt = `Create a complete ${selectedPlatform.toLowerCase()} UI design based on this request: "${prompt}".
 
@@ -304,7 +324,14 @@ Requirements:
 - Make it visually stunning and user-friendly
 - Ensure proper accessibility (semantic HTML, ARIA labels)
 - Include realistic content and placeholder text
-- Use high-quality demo images from Unsplash (https://images.unsplash.com/photo-[id]?w=400&h=300&fit=crop)
+- Use MULTIPLE high-quality demo images from Unsplash throughout the design:
+  * Hero/banner images: https://images.unsplash.com/photo-[id]?w=800&h=400&fit=crop
+  * Profile/avatar images: https://images.unsplash.com/photo-[id]?w=150&h=150&fit=crop
+  * Product/card images: https://images.unsplash.com/photo-[id]?w=300&h=200&fit=crop
+  * Background images: https://images.unsplash.com/photo-[id]?w=1200&h=800&fit=crop
+  * REQUIRED: Include at least 4-6 different images throughout the design
+  * Each image should have a unique Unsplash photo ID
+  * Use images that complement the design theme and content
 - Add loading states, skeleton screens, and interactive elements
 - Include icons using Unicode symbols or CSS-drawn icons
 - Make it production-ready with proper spacing, typography, and visual hierarchy
@@ -407,16 +434,19 @@ Requirements:
        const parsedCode = parseGeneratedCode(aiResponse)
        setGeneratedCode(parsedCode)
        
+       // Validate image count
+       const imageValidation = validateImageCount(parsedCode.html, parsedCode.css)
+       
        // Save project to history
        saveProject(designDescription, selectedPlatform, parsedCode)
        
-       // Update chat with AI response (without showing raw code)
+       // Update chat with AI response and image validation feedback
        const updatedMessages = [
          ...initialMessages,
          {
            id: 3,
            type: 'ai',
-           content: 'Design generated successfully! Your new UI design is ready. You can view the code by clicking the "View Code" button.',
+           content: `Design generated successfully! Your new UI design is ready. You can view the code by clicking the "View Code" button. ${imageValidation.message}`,
            timestamp: new Date()
          }
        ]
@@ -454,15 +484,26 @@ Requirements:
       const parsedCode = parseGeneratedCode(aiResponse)
       if (parsedCode.html || parsedCode.css || parsedCode.js) {
         setGeneratedCode(parsedCode)
+        
+        // Validate image count for updates
+        const imageValidation = validateImageCount(parsedCode.html, parsedCode.css)
+        
+        const aiMessage = {
+          id: chatMessages.length + 2,
+          type: 'ai',
+          content: `I've updated your design based on your request. The changes are now applied to your preview. ${imageValidation.message}`,
+          timestamp: new Date()
+        }
+        setChatMessages(prev => [...prev, aiMessage])
+      } else {
+        const aiMessage = {
+          id: chatMessages.length + 2,
+          type: 'ai',
+          content: 'I\'ve updated your design based on your request. The changes are now applied to your preview.',
+          timestamp: new Date()
+        }
+        setChatMessages(prev => [...prev, aiMessage])
       }
-      
-      const aiMessage = {
-        id: chatMessages.length + 2,
-        type: 'ai',
-        content: 'I\'ve updated your design based on your request. The changes are now applied to your preview.',
-        timestamp: new Date()
-      }
-      setChatMessages(prev => [...prev, aiMessage])
       
       // Auto-scroll to bottom
       setTimeout(() => {
