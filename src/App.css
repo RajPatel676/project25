@@ -1527,8 +1527,8 @@ Header Tabs */
     background: #0056b3;
   }
 
-/* Design Specification Panel Styles */
-.design-spec-panel {
+/* Code Panel Styles */
+.code-panel {
   position: absolute;
   top: 0;
   right: 0;
@@ -1542,7 +1542,7 @@ Header Tabs */
   overflow: hidden;
 }
 
-.design-spec-header {
+.code-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1551,14 +1551,14 @@ Header Tabs */
   background: #2a2a2a;
 }
 
-.design-spec-header h3 {
+.code-header h3 {
   color: #fff;
   font-size: 16px;
   font-weight: 500;
   margin: 0;
 }
 
-.close-design-spec-btn {
+.close-code-btn {
   background: none;
   border: none;
   color: #999;
@@ -1568,7 +1568,7 @@ Header Tabs */
   transition: all 0.2s;
 }
 
-.close-design-spec-btn:hover {
+.close-code-btn:hover {
   background: #333;
   color: #fff;
 }
@@ -1603,7 +1603,7 @@ Header Tabs */
   background: #333;
 }
 
-.design-spec-content {
+.code-content {
   flex: 1;
   overflow: auto;
   padding: 20px;
@@ -1634,124 +1634,23 @@ Header Tabs */
   border-left: 4px solid #f7df1e;
 }
 
-.design-spec-text h4 {
-  color: #fff;
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0 0 16px 0;
+.code-block code {
+  background: none;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+  font-family: inherit;
 }
 
-.design-spec-text p {
-  color: #ccc;
-  font-size: 14px;
-  line-height: 1.6;
-  margin: 0 0 16px 0;
-}
-
-.design-spec-details h5 {
-  color: #fff;
-  font-size: 16px;
-  font-weight: 500;
-  margin: 0 0 12px 0;
-}
-
-.design-spec-details ul {
-  color: #ccc;
-  font-size: 14px;
-  line-height: 1.6;
-  margin: 0 0 16px 0;
-  padding-left: 20px;
-}
-
-.design-spec-details li {
-  margin: 0 0 8px 0;
-}
-
-.design-spec-note {
-  background: #2a2a2a;
-  border: 1px solid #444;
-  border-radius: 8px;
-  padding: 16px;
-  margin-top: 20px;
-}
-
-.design-spec-note p {
-  margin: 0;
-  font-size: 13px;
-  color: #aaa;
-}
-
-/* Design Mockup Placeholder Styles */
-.design-mockup-placeholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 40px;
-  text-align: center;
-  background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
-}
-
-.mockup-header h3 {
-  color: #fff;
-  font-size: 24px;
-  font-weight: 600;
-  margin: 0 0 8px 0;
-}
-
-.mockup-header p {
-  color: #999;
-  font-size: 16px;
-  margin: 0 0 32px 0;
-}
-
-.mockup-content {
-  max-width: 400px;
-}
-
-.mockup-icon {
-  margin: 0 0 24px 0;
-  color: #007bff;
-}
-
-.mockup-info h4 {
-  color: #fff;
-  font-size: 20px;
-  font-weight: 500;
-  margin: 0 0 16px 0;
-}
-
-.mockup-info p {
-  color: #ccc;
-  font-size: 14px;
-  line-height: 1.6;
-  margin: 0 0 16px 0;
-}
-
-.mockup-info ul {
-  color: #ccc;
-  font-size: 14px;
-  line-height: 1.6;
-  margin: 0 0 16px 0;
-  padding-left: 20px;
-  text-align: left;
-}
-
-.mockup-info li {
-  margin: 0 0 8px 0;
-}
-
-/* Responsive adjustments for design specification panel */
+/* Responsive adjustments for code panel */
 @media (max-width: 1200px) {
-  .design-spec-panel {
+  .code-panel {
     width: 350px;
   }
 }
 
 @media (max-width: 768px) {
-  .design-spec-panel {
+  .code-panel {
     width: 100%;
     height: 50%;
     top: auto;
