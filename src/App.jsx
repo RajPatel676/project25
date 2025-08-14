@@ -85,12 +85,24 @@ function App() {
   const handleWheel = (e) => {
     // Only allow zoom in preview area with generated content
     if (!generatedCode.html || !isHoveringViewport) {
-      e.preventDefault()
+      // Use a more compatible approach for preventing default
+      try {
+        e.preventDefault()
+      } catch (error) {
+        // If preventDefault fails, try alternative approach
+        e.stopImmediatePropagation()
+      }
       return false
     }
     
-    e.preventDefault()
-    e.stopPropagation()
+    // Use a more compatible approach for preventing default
+    try {
+      e.preventDefault()
+      e.stopPropagation()
+    } catch (error) {
+      // If preventDefault fails, try alternative approach
+      e.stopImmediatePropagation()
+    }
     
     const delta = e.deltaY
     if (delta < 0) {
@@ -106,7 +118,13 @@ function App() {
 
   const handleMouseDown = (e) => {
     if (zoomLevel > 100 && generatedCode.html) {
-      e.preventDefault()
+      // Use a more compatible approach for preventing default
+      try {
+        e.preventDefault()
+      } catch (error) {
+        // If preventDefault fails, try alternative approach
+        e.stopImmediatePropagation()
+      }
       setIsPanning(true)
       setLastPanPoint({ x: e.clientX, y: e.clientY })
     }
@@ -114,7 +132,13 @@ function App() {
 
   const handleMouseMove = (e) => {
     if (isPanning && zoomLevel > 100 && generatedCode.html) {
-      e.preventDefault()
+      // Use a more compatible approach for preventing default
+      try {
+        e.preventDefault()
+      } catch (error) {
+        // If preventDefault fails, try alternative approach
+        e.stopImmediatePropagation()
+      }
       const deltaX = e.clientX - lastPanPoint.x
       const deltaY = e.clientY - lastPanPoint.y
       setPanOffset(prev => ({
@@ -150,13 +174,21 @@ function App() {
     const preventGlobalZoom = (e) => {
       // Always prevent default browser zoom
       if (e.ctrlKey || e.metaKey) {
-        e.preventDefault()
+        try {
+          e.preventDefault()
+        } catch (error) {
+          e.stopImmediatePropagation()
+        }
         return false
       }
       
       // Prevent wheel zoom unless in our preview area
       if (!isHoveringViewport || !generatedCode.html) {
-        e.preventDefault()
+        try {
+          e.preventDefault()
+        } catch (error) {
+          e.stopImmediatePropagation()
+        }
         return false
       }
     }
@@ -176,13 +208,21 @@ function App() {
     // Prevent pinch zoom on touch devices
     document.addEventListener('touchstart', (e) => {
       if (e.touches.length > 1) {
-        e.preventDefault()
+        try {
+          e.preventDefault()
+        } catch (error) {
+          e.stopImmediatePropagation()
+        }
       }
     }, { passive: false })
 
     document.addEventListener('touchmove', (e) => {
       if (e.touches.length > 1) {
-        e.preventDefault()
+        try {
+          e.preventDefault()
+        } catch (error) {
+          e.stopImmediatePropagation()
+        }
       }
     }, { passive: false })
 
