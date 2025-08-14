@@ -83,22 +83,24 @@ function App() {
 
   const handleWheel = (e) => {
     // Only allow zoom in preview area with generated content
-    if (generatedCode.html && isHoveringViewport) {
+    if (!generatedCode.html || !isHoveringViewport) {
       e.preventDefault()
-      e.stopPropagation()
-      
-      const delta = e.deltaY
-      if (delta < 0) {
-        // Zoom in
-        setZoomLevel(prev => Math.min(prev + 10, 200))
-      } else {
-        // Zoom out
-        setZoomLevel(prev => Math.max(prev - 10, 50))
-      }
-      
       return false
     }
-    // Allow normal scrolling for the rest of the website
+    
+    e.preventDefault()
+    e.stopPropagation()
+    
+    const delta = e.deltaY
+    if (delta < 0) {
+      // Zoom in
+      setZoomLevel(prev => Math.min(prev + 10, 200))
+    } else {
+      // Zoom out
+      setZoomLevel(prev => Math.max(prev - 10, 50))
+    }
+    
+    return false
   }
 
   const handleMouseDown = (e) => {
@@ -142,8 +144,22 @@ function App() {
 
 
 
-  // Prevent browser zoom shortcuts but allow normal scrolling
+  // Prevent all website zoom and only allow preview zoom
   useEffect(() => {
+    const preventGlobalZoom = (e) => {
+      // Always prevent default browser zoom
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault()
+        return false
+      }
+      
+      // Prevent wheel zoom unless in our preview area
+      if (!isHoveringViewport || !generatedCode.html) {
+        e.preventDefault()
+        return false
+      }
+    }
+
     const preventKeyboardZoom = (e) => {
       // Prevent Ctrl/Cmd + Plus/Minus/0 zoom
       if ((e.ctrlKey || e.metaKey) && (e.key === '+' || e.key === '-' || e.key === '0' || e.key === '=' || e.key === '_')) {
@@ -153,6 +169,7 @@ function App() {
     }
 
     // Add event listeners
+    document.addEventListener('wheel', preventGlobalZoom, { passive: false })
     document.addEventListener('keydown', preventKeyboardZoom, { passive: false })
     
     // Prevent pinch zoom on touch devices
@@ -169,11 +186,12 @@ function App() {
     }, { passive: false })
 
     return () => {
+      document.removeEventListener('wheel', preventGlobalZoom)
       document.removeEventListener('keydown', preventKeyboardZoom)
-      document.removeEventListener('touchstart', preventKeyboardZoom)
-      document.removeEventListener('touchmove', preventKeyboardZoom)
+      document.removeEventListener('touchstart', preventGlobalZoom)
+      document.removeEventListener('touchmove', preventGlobalZoom)
     }
-  }, [])
+  }, [isHoveringViewport, generatedCode.html])
 
   const parseGeneratedCode = (response) => {
     const htmlMatch = response.match(/```html\n([\s\S]*?)\n```/)
