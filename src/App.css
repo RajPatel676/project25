@@ -1523,8 +1523,143 @@ Header Tabs */
   color: white;
 }
 
-.control-btn.active:hover {
-  background: #0056b3;
+  .control-btn.active:hover {
+    background: #0056b3;
+  }
+
+/* Code Panel Styles */
+.code-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 400px;
+  height: 100%;
+  background: #1a1a1a;
+  border-left: 1px solid #333;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.code-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #333;
+  background: #2a2a2a;
+}
+
+.code-header h3 {
+  color: #fff;
+  font-size: 16px;
+  font-weight: 500;
+  margin: 0;
+}
+
+.close-code-btn {
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.close-code-btn:hover {
+  background: #333;
+  color: #fff;
+}
+
+.code-tabs {
+  display: flex;
+  background: #2a2a2a;
+  border-bottom: 1px solid #333;
+}
+
+.code-tab {
+  flex: 1;
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+  border-bottom: 2px solid transparent;
+}
+
+.code-tab:hover {
+  background: #333;
+  color: #fff;
+}
+
+.code-tab.active {
+  color: #fff;
+  border-bottom-color: #007bff;
+  background: #333;
+}
+
+.code-content {
+  flex: 1;
+  overflow: auto;
+  padding: 20px;
+}
+
+.code-block {
+  background: #2a2a2a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 0;
+  overflow-x: auto;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #e6e6e6;
+}
+
+.code-block.html {
+  border-left: 4px solid #e34c26;
+}
+
+.code-block.css {
+  border-left: 4px solid #264de4;
+}
+
+.code-block.javascript {
+  border-left: 4px solid #f7df1e;
+}
+
+.code-block code {
+  background: none;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+  font-family: inherit;
+}
+
+/* Responsive adjustments for code panel */
+@media (max-width: 1200px) {
+  .code-panel {
+    width: 350px;
+  }
+}
+
+@media (max-width: 768px) {
+  .code-panel {
+    width: 100%;
+    height: 50%;
+    top: auto;
+    bottom: 0;
+    right: auto;
+    left: 0;
+    border-left: none;
+    border-top: 1px solid #333;
+  }
 }
 
 /* Responsive Design for Output */

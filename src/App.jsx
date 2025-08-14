@@ -28,6 +28,7 @@ function App() {
   const [designDescription, setDesignDescription] = useState('')
   const [generatedDesign, setGeneratedDesign] = useState(null)
   const [projectHistory, setProjectHistory] = useState([])
+  const [showCode, setShowCode] = useState(false)
   
   const GEMINI_API_KEY = 'AIzaSyBlX_L1gawWBjMf2hV9Mx0qQUVItAFMjE4'
   
@@ -316,29 +317,59 @@ Requirements:
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 60000) // 60 second timeout
 
-      const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-goog-api-key': GEMINI_API_KEY
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: apiPrompt
-            }]
-          }]
-        }),
-        signal: controller.signal
-      })
+      // Try a set of known models; stop at the first that succeeds
+      const modelCandidates = [
+        'gemini-2.0-flash',
+        'gemini-2.0-flash-exp',
+        'gemini-1.5-flash',
+        'gemini-1.5-pro'
+      ]
+
+      let lastError
+      let data
+      for (const model of modelCandidates) {
+        try {
+          console.log(`Trying Gemini model: ${model}`)
+          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              // Use lowercase per docs
+              'x-goog-api-key': GEMINI_API_KEY
+            },
+            body: JSON.stringify({
+              contents: [{
+                parts: [{
+                  text: apiPrompt
+                }]
+              }]
+            }),
+            signal: controller.signal
+          })
+
+          if (!response.ok) {
+            if (response.status === 404) {
+              lastError = new Error(`HTTP 404 for model ${model}`)
+              continue
+            }
+            throw new Error(`HTTP error! status: ${response.status}`)
+          }
+
+          data = await response.json()
+          break
+        } catch (err) {
+          lastError = err
+          if (err?.name === 'AbortError') {
+            break
+          }
+        }
+      }
 
       clearTimeout(timeoutId)
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+      if (!data) {
+        throw lastError || new Error('No response from Gemini API')
       }
-
-      const data = await response.json()
       return data.candidates[0].content.parts[0].text
     } catch (error) {
       console.error('Error calling Gemini API:', error)
@@ -379,13 +410,13 @@ Requirements:
        // Save project to history
        saveProject(designDescription, selectedPlatform, parsedCode)
        
-       // Update chat with AI response
+       // Update chat with AI response (without showing raw code)
        const updatedMessages = [
          ...initialMessages,
          {
            id: 3,
            type: 'ai',
-           content: aiResponse,
+           content: 'Design generated successfully! Your new UI design is ready. You can view the code by clicking the "View Code" button.',
            timestamp: new Date()
          }
        ]
@@ -428,7 +459,7 @@ Requirements:
       const aiMessage = {
         id: chatMessages.length + 2,
         type: 'ai',
-        content: aiResponse,
+        content: 'I\'ve updated your design based on your request. The changes are now applied to your preview.',
         timestamp: new Date()
       }
       setChatMessages(prev => [...prev, aiMessage])
@@ -733,6 +764,52 @@ Requirements:
                     )}
                   </div>
 
+                  {/* Code Display Panel */}
+                  {showCode && generatedCode.html && (
+                    <div className="code-panel">
+                      <div className="code-header">
+                        <h3>Generated Code</h3>
+                        <button 
+                          className="close-code-btn"
+                          onClick={() => setShowCode(false)}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                            <path d="M18 6L6 18" stroke="currentColor" strokeWidth="2"/>
+                            <path d="M6 6l12 12" stroke="currentColor" strokeWidth="2"/>
+                          </svg>
+                        </button>
+                      </div>
+                      <div className="code-tabs">
+                        <button className={`code-tab ${activeTab === 'html' ? 'active' : ''}`} onClick={() => setActiveTab('html')}>
+                          HTML
+                        </button>
+                        <button className={`code-tab ${activeTab === 'css' ? 'active' : ''}`} onClick={() => setActiveTab('css')}>
+                          CSS
+                        </button>
+                        <button className={`code-tab ${activeTab === 'js' ? 'active' : ''}`} onClick={() => setActiveTab('js')}>
+                          JavaScript
+                        </button>
+                      </div>
+                      <div className="code-content">
+                        {activeTab === 'html' && (
+                          <pre className="code-block html">
+                            <code>{generatedCode.html}</code>
+                          </pre>
+                        )}
+                        {activeTab === 'css' && (
+                          <pre className="code-block css">
+                            <code>{generatedCode.css}</code>
+                          </pre>
+                        )}
+                        {activeTab === 'js' && (
+                          <pre className="code-block javascript">
+                            <code>{generatedCode.js || '// No JavaScript needed'}</code>
+                          </pre>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Floating Controls */}
                   <div className="floating-controls">
                     <div className="control-group zoom-controls">
@@ -781,7 +858,11 @@ Requirements:
                     </div>
 
                     <div className="control-group action-controls">
-                      <button className="control-btn" title="View Code">
+                      <button 
+                        className={`control-btn ${showCode ? 'active' : ''}`} 
+                        title="View Code"
+                        onClick={() => setShowCode(!showCode)}
+                      >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                           <polyline points="16,18 22,12 16,6" stroke="currentColor" strokeWidth="2"/>
                           <polyline points="8,6 2,12 8,18" stroke="currentColor" strokeWidth="2"/>
