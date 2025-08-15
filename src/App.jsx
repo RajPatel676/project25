@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import './App.css'
 
 function App() {
@@ -11,12 +11,12 @@ function App() {
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [activeTab, setActiveTab] = useState('preview') // 'preview' or 'code'
   const [selectedPlatform, setSelectedPlatform] = useState('Web')
-  
+
   // Generated content
   const [generatedPages, setGeneratedPages] = useState({})
   const [currentCode, setCurrentCode] = useState({ html: '', css: '' })
   const [generatedCode, setGeneratedCode] = useState({ html: '', css: '', js: '' })
-  
+
   // UI states
   const [isHoveringViewport, setIsHoveringViewport] = useState(false)
   const [commandInput, setCommandInput] = useState('')
@@ -29,9 +29,10 @@ function App() {
   const [generatedDesign, setGeneratedDesign] = useState(null)
   const [projectHistory, setProjectHistory] = useState([])
   const [showCode, setShowCode] = useState(false)
-  
+
   const GEMINI_API_KEY = 'AIzaSyBlX_L1gawWBjMf2hV9Mx0qQUVItAFMjE4'
-  
+  const viewportRef = useRef(null)
+
   // Load project history from localStorage on component mount
   useEffect(() => {
     const savedProjects = localStorage.getItem('projectHistory')
@@ -43,12 +44,12 @@ function App() {
       }
     }
   }, [])
-  
+
   // Save project history to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('projectHistory', JSON.stringify(projectHistory))
   }, [projectHistory])
-  
+
   const saveProject = (description, platform, generatedCode) => {
     const newProject = {
       id: Date.now(),
@@ -60,10 +61,10 @@ function App() {
       code: generatedCode,
       timestamp: new Date().toISOString()
     }
-    
+
     setProjectHistory(prev => [newProject, ...prev.slice(0, 19)]) // Keep only last 20 projects
   }
-  
+
   const loadProject = (project) => {
     setDesignDescription(project.description)
     setSelectedPlatform(project.subtitle)
@@ -71,7 +72,7 @@ function App() {
     setGeneratedDesign(project.description)
     setIsGenerating(true)
   }
-  
+
   const pages = ['Home', 'Features', 'Pricing', 'About', 'Contact', 'Login', 'Signup', 'Dashboard']
 
   const handleZoomIn = () => {
@@ -84,14 +85,13 @@ function App() {
 
   const handleWheel = (e) => {
     // Only allow zoom in preview area with generated content
-    if (!generatedCode.html || !isHoveringViewport) {
-      e.preventDefault()
-      return false
+    if (!currentCode.html || !isHoveringViewport) {
+      return
     }
-    
+
     e.preventDefault()
     e.stopPropagation()
-    
+
     const delta = e.deltaY
     if (delta < 0) {
       // Zoom in
@@ -100,9 +100,32 @@ function App() {
       // Zoom out
       setZoomLevel(prev => Math.max(prev - 10, 50))
     }
-    
-    return false
   }
+
+  // Add wheel event listener with passive: false
+  useEffect(() => {
+    const viewport = viewportRef.current
+    if (viewport) {
+      const wheelHandler = (e) => {
+        if (currentCode.html && isHoveringViewport) {
+          e.preventDefault()
+          e.stopPropagation()
+
+          const delta = e.deltaY
+          if (delta < 0) {
+            setZoomLevel(prev => Math.min(prev + 10, 200))
+          } else {
+            setZoomLevel(prev => Math.max(prev - 10, 50))
+          }
+        }
+      }
+
+      viewport.addEventListener('wheel', wheelHandler, { passive: false })
+      return () => {
+        viewport.removeEventListener('wheel', wheelHandler)
+      }
+    }
+  }, [currentCode.html, isHoveringViewport])
 
   const handleMouseDown = (e) => {
     if (zoomLevel > 100 && generatedCode.html) {
@@ -153,7 +176,7 @@ function App() {
         e.preventDefault()
         return false
       }
-      
+
       // Prevent wheel zoom unless in our preview area
       if (!isHoveringViewport || !generatedCode.html) {
         e.preventDefault()
@@ -172,7 +195,7 @@ function App() {
     // Add event listeners
     document.addEventListener('wheel', preventGlobalZoom, { passive: false })
     document.addEventListener('keydown', preventKeyboardZoom, { passive: false })
-    
+
     // Prevent pinch zoom on touch devices
     document.addEventListener('touchstart', (e) => {
       if (e.touches.length > 1) {
@@ -264,7 +287,7 @@ function App() {
   const callGeminiAPI = async (prompt, isFollowUp = false) => {
     try {
       let apiPrompt = ''
-      
+
       if (isFollowUp) {
         apiPrompt = `Based on our previous conversation about the ${selectedPlatform.toLowerCase()} design, please respond to this follow-up: "${prompt}". If the user is asking for code modifications, provide the updated HTML, CSS, and JavaScript code in the same format as before.`
       } else {
@@ -381,7 +404,7 @@ Requirements:
     if (designDescription.trim()) {
       setIsGenerating(true)
       setIsLoading(true)
-      
+
       // Add initial message to chat
       const initialMessages = [
         {
@@ -402,27 +425,27 @@ Requirements:
       // Call Gemini API
       const aiResponse = await callGeminiAPI(designDescription)
       setIsLoading(false)
-      
-             // Parse the generated code
-       const parsedCode = parseGeneratedCode(aiResponse)
-       setGeneratedCode(parsedCode)
-       
-       // Save project to history
-       saveProject(designDescription, selectedPlatform, parsedCode)
-       
-       // Update chat with AI response (without showing raw code)
-       const updatedMessages = [
-         ...initialMessages,
-         {
-           id: 3,
-           type: 'ai',
-           content: 'Design generated successfully! Your new UI design is ready. You can view the code by clicking the "View Code" button.',
-           timestamp: new Date()
-         }
-       ]
-       setChatMessages(updatedMessages)
-       setGeneratedDesign(aiResponse)
-      
+
+      // Parse the generated code
+      const parsedCode = parseGeneratedCode(aiResponse)
+      setGeneratedCode(parsedCode)
+
+      // Save project to history
+      saveProject(designDescription, selectedPlatform, parsedCode)
+
+      // Update chat with AI response (without showing raw code)
+      const updatedMessages = [
+        ...initialMessages,
+        {
+          id: 3,
+          type: 'ai',
+          content: 'Design generated successfully! Your new UI design is ready. You can view the code by clicking the "View Code" button.',
+          timestamp: new Date()
+        }
+      ]
+      setChatMessages(updatedMessages)
+      setGeneratedDesign(aiResponse)
+
       // Auto-scroll to bottom
       setTimeout(() => {
         const chatContainer = document.querySelector('.chat-messages')
@@ -445,17 +468,17 @@ Requirements:
       setChatMessages(updatedMessages)
       setChatInput('')
       setIsLoading(true)
-      
+
       // Call Gemini API with context
       const aiResponse = await callGeminiAPI(chatInput, true)
       setIsLoading(false)
-      
+
       // Check if the response contains code and update if so
       const parsedCode = parseGeneratedCode(aiResponse)
       if (parsedCode.html || parsedCode.css || parsedCode.js) {
         setGeneratedCode(parsedCode)
       }
-      
+
       const aiMessage = {
         id: chatMessages.length + 2,
         type: 'ai',
@@ -463,7 +486,7 @@ Requirements:
         timestamp: new Date()
       }
       setChatMessages(prev => [...prev, aiMessage])
-      
+
       // Auto-scroll to bottom
       setTimeout(() => {
         const chatContainer = document.querySelector('.chat-messages')
@@ -481,26 +504,26 @@ Requirements:
         <div className="header-left">
           <div className="search-container">
             <svg className="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2"/>
-              <path d="m21 21-4.35-4.35" stroke="currentColor" strokeWidth="2"/>
+              <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
+              <path d="m21 21-4.35-4.35" stroke="currentColor" strokeWidth="2" />
             </svg>
             <input type="text" placeholder="Search designs" className="search-input" />
           </div>
         </div>
-        
+
         <div className="header-center">
           <div className="logo">
             <span className="logo-text">Stitch</span>
             <span className="beta-badge">BETA</span>
           </div>
         </div>
-        
+
         <div className="header-right">
           <button className="menu-button">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="1" fill="currentColor"/>
-              <circle cx="19" cy="12" r="1" fill="currentColor"/>
-              <circle cx="5" cy="12" r="1" fill="currentColor"/>
+              <circle cx="12" cy="12" r="1" fill="currentColor" />
+              <circle cx="19" cy="12" r="1" fill="currentColor" />
+              <circle cx="5" cy="12" r="1" fill="currentColor" />
             </svg>
           </button>
           <div className="profile-avatar">
@@ -517,8 +540,8 @@ Requirements:
               <div className="sidebar-section">
                 <h3 className="sidebar-title">Recent Projects</h3>
                 {projectHistory.map((project) => (
-                  <div 
-                    key={project.id} 
+                  <div
+                    key={project.id}
                     className="project-item clickable"
                     onClick={() => loadProject(project)}
                     title="Click to load this project"
@@ -550,7 +573,7 @@ Requirements:
                 <div className="mode-selector">
                   <span>Standard mode</span>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2"/>
+                    <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" />
                   </svg>
                 </div>
               </div>
@@ -562,37 +585,37 @@ Requirements:
                   value={designDescription}
                   onChange={(e) => setDesignDescription(e.target.value)}
                 />
-                
+
                 <div className="input-footer">
                   <div className="platform-selector">
-                    <button 
+                    <button
                       className={`platform-btn ${selectedPlatform === 'Mobile' ? 'active' : ''}`}
                       onClick={() => setSelectedPlatform('Mobile')}
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <rect x="5" y="2" width="14" height="20" rx="2" ry="2" stroke="currentColor" strokeWidth="2"/>
-                        <line x1="12" y1="18" x2="12.01" y2="18" stroke="currentColor" strokeWidth="2"/>
+                        <rect x="5" y="2" width="14" height="20" rx="2" ry="2" stroke="currentColor" strokeWidth="2" />
+                        <line x1="12" y1="18" x2="12.01" y2="18" stroke="currentColor" strokeWidth="2" />
                       </svg>
                       Mobile
                     </button>
-                    <button 
+                    <button
                       className={`platform-btn ${selectedPlatform === 'Web' ? 'active' : ''}`}
                       onClick={() => setSelectedPlatform('Web')}
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2" stroke="currentColor" strokeWidth="2"/>
-                        <line x1="8" y1="21" x2="16" y2="21" stroke="currentColor" strokeWidth="2"/>
-                        <line x1="12" y1="17" x2="12" y2="21" stroke="currentColor" strokeWidth="2"/>
+                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2" stroke="currentColor" strokeWidth="2" />
+                        <line x1="8" y1="21" x2="16" y2="21" stroke="currentColor" strokeWidth="2" />
+                        <line x1="12" y1="17" x2="12" y2="21" stroke="currentColor" strokeWidth="2" />
                       </svg>
                       Web
                     </button>
                   </div>
-                  
+
                   <button className="generate-btn" onClick={handleGenerate}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" strokeWidth="2"/>
-                      <circle cx="9" cy="9" r="2" stroke="currentColor" strokeWidth="2"/>
-                      <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" stroke="currentColor" strokeWidth="2"/>
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" strokeWidth="2" />
+                      <circle cx="9" cy="9" r="2" stroke="currentColor" strokeWidth="2" />
+                      <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" stroke="currentColor" strokeWidth="2" />
                     </svg>
                     Generate
                   </button>
@@ -603,8 +626,8 @@ Requirements:
                 <h3 className="prompts-title">Try these prompts</h3>
                 <div className="prompt-buttons">
                   {prompts.map((prompt, index) => (
-                    <button 
-                      key={index} 
+                    <button
+                      key={index}
                       className="prompt-btn"
                       onClick={() => setDesignDescription(prompt)}
                     >
@@ -622,17 +645,17 @@ Requirements:
                   <div className="chat-title">
                     <div className="chat-avatar">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="currentColor" strokeWidth="2"/>
-                        <path d="m2 17 10 5 10-5" stroke="currentColor" strokeWidth="2"/>
-                        <path d="m2 12 10 5 10-5" stroke="currentColor" strokeWidth="2"/>
+                        <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="currentColor" strokeWidth="2" />
+                        <path d="m2 17 10 5 10-5" stroke="currentColor" strokeWidth="2" />
+                        <path d="m2 12 10 5 10-5" stroke="currentColor" strokeWidth="2" />
                       </svg>
                       <span>Stitch</span>
                     </div>
                   </div>
                   <button className="close-chat" onClick={() => setIsGenerating(false)}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <path d="M18 6L6 18" stroke="currentColor" strokeWidth="2"/>
-                      <path d="M6 6l12 12" stroke="currentColor" strokeWidth="2"/>
+                      <path d="M18 6L6 18" stroke="currentColor" strokeWidth="2" />
+                      <path d="M6 6l12 12" stroke="currentColor" strokeWidth="2" />
                     </svg>
                   </button>
                 </div>
@@ -665,8 +688,8 @@ Requirements:
                   />
                   <button onClick={handleSendMessage} className="send-button">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <path d="M22 2L11 13" stroke="currentColor" strokeWidth="2"/>
-                      <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" strokeWidth="2"/>
+                      <path d="M22 2L11 13" stroke="currentColor" strokeWidth="2" />
+                      <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" strokeWidth="2" />
                     </svg>
                   </button>
                 </div>
@@ -678,9 +701,9 @@ Requirements:
 
               {/* Design Output Panel */}
               <div className="output-panel">
-                <div 
-                  className="stitch-viewport" 
-                  onWheel={handleWheel}
+                <div
+                  ref={viewportRef}
+                  className="stitch-viewport"
                   onMouseDown={handleMouseDown}
                   onMouseMove={handleMouseMove}
                   onMouseUp={handleMouseUp}
@@ -689,8 +712,8 @@ Requirements:
                   <div className="viewport-background">
                     <div className="grid-pattern"></div>
                   </div>
-                  
-                  <div 
+
+                  <div
                     className="viewport-content"
                     style={{
                       transform: `translate(${panOffset.x}px, ${panOffset.y}px)`
@@ -727,9 +750,12 @@ Requirements:
                                 <meta charset="UTF-8">
                                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                                 <title>Generated Design</title>
+                                <script src="https://cdn.tailwindcss.com"></script>
+                                <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
                                 <style>
                                   * { margin: 0; padding: 0; box-sizing: border-box; }
-                                  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+                                  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+                                  .font-poppins { font-family: 'Poppins', sans-serif; }
                                   ${generatedCode.css}
                                 </style>
                               </head>
@@ -744,6 +770,8 @@ Requirements:
                             title="Design Preview"
                             className="preview-iframe"
                             sandbox="allow-scripts allow-same-origin"
+                            onError={(e) => console.warn('Iframe error:', e)}
+                            onLoad={() => console.log('Iframe loaded successfully')}
                           />
                         </div>
                       </div>
@@ -751,9 +779,9 @@ Requirements:
                       <div className="empty-preview">
                         <div className="empty-icon">
                           <svg width="80" height="80" viewBox="0 0 24 24" fill="none">
-                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" strokeWidth="1"/>
-                            <circle cx="9" cy="9" r="2" stroke="currentColor" strokeWidth="1"/>
-                            <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" stroke="currentColor" strokeWidth="1"/>
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" strokeWidth="1" />
+                            <circle cx="9" cy="9" r="2" stroke="currentColor" strokeWidth="1" />
+                            <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" stroke="currentColor" strokeWidth="1" />
                           </svg>
                         </div>
                         <div className="empty-text">
@@ -769,13 +797,13 @@ Requirements:
                     <div className="code-panel">
                       <div className="code-header">
                         <h3>Generated Code</h3>
-                        <button 
+                        <button
                           className="close-code-btn"
                           onClick={() => setShowCode(false)}
                         >
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                            <path d="M18 6L6 18" stroke="currentColor" strokeWidth="2"/>
-                            <path d="M6 6l12 12" stroke="currentColor" strokeWidth="2"/>
+                            <path d="M18 6L6 18" stroke="currentColor" strokeWidth="2" />
+                            <path d="M6 6l12 12" stroke="currentColor" strokeWidth="2" />
                           </svg>
                         </button>
                       </div>
@@ -815,9 +843,9 @@ Requirements:
                     <div className="control-group zoom-controls">
                       <button className="control-btn zoom-out" title="Zoom Out" onClick={handleZoomOut}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                          <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2"/>
-                          <line x1="8" y1="11" x2="14" y2="11" stroke="currentColor" strokeWidth="2"/>
-                          <path d="m21 21-4.35-4.35" stroke="currentColor" strokeWidth="2"/>
+                          <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
+                          <line x1="8" y1="11" x2="14" y2="11" stroke="currentColor" strokeWidth="2" />
+                          <path d="m21 21-4.35-4.35" stroke="currentColor" strokeWidth="2" />
                         </svg>
                       </button>
                       <button className="zoom-level-btn" title="Reset Zoom" onClick={resetZoom}>
@@ -825,54 +853,54 @@ Requirements:
                       </button>
                       <button className="control-btn zoom-in" title="Zoom In" onClick={handleZoomIn}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                          <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2"/>
-                          <line x1="11" y1="8" x2="11" y2="14" stroke="currentColor" strokeWidth="2"/>
-                          <line x1="8" y1="11" x2="14" y2="11" stroke="currentColor" strokeWidth="2"/>
-                          <path d="m21 21-4.35-4.35" stroke="currentColor" strokeWidth="2"/>
+                          <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
+                          <line x1="11" y1="8" x2="11" y2="14" stroke="currentColor" strokeWidth="2" />
+                          <line x1="8" y1="11" x2="14" y2="11" stroke="currentColor" strokeWidth="2" />
+                          <path d="m21 21-4.35-4.35" stroke="currentColor" strokeWidth="2" />
                         </svg>
                       </button>
                     </div>
 
                     <div className="control-group view-controls">
-                      <button 
+                      <button
                         className={`control-btn ${selectedPlatform === 'Mobile' ? 'active' : ''}`}
                         onClick={() => setSelectedPlatform('Mobile')}
                         title="Mobile View"
                       >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                          <rect x="5" y="2" width="14" height="20" rx="2" ry="2" stroke="currentColor" strokeWidth="2"/>
-                          <line x1="12" y1="18" x2="12.01" y2="18" stroke="currentColor" strokeWidth="2"/>
+                          <rect x="5" y="2" width="14" height="20" rx="2" ry="2" stroke="currentColor" strokeWidth="2" />
+                          <line x1="12" y1="18" x2="12.01" y2="18" stroke="currentColor" strokeWidth="2" />
                         </svg>
                       </button>
-                      <button 
+                      <button
                         className={`control-btn ${selectedPlatform === 'Web' ? 'active' : ''}`}
                         onClick={() => setSelectedPlatform('Web')}
                         title="Desktop View"
                       >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                          <rect x="2" y="3" width="20" height="14" rx="2" ry="2" stroke="currentColor" strokeWidth="2"/>
-                          <line x1="8" y1="21" x2="16" y2="21" stroke="currentColor" strokeWidth="2"/>
-                          <line x1="12" y1="17" x2="12" y2="21" stroke="currentColor" strokeWidth="2"/>
+                          <rect x="2" y="3" width="20" height="14" rx="2" ry="2" stroke="currentColor" strokeWidth="2" />
+                          <line x1="8" y1="21" x2="16" y2="21" stroke="currentColor" strokeWidth="2" />
+                          <line x1="12" y1="17" x2="12" y2="21" stroke="currentColor" strokeWidth="2" />
                         </svg>
                       </button>
                     </div>
 
                     <div className="control-group action-controls">
-                      <button 
-                        className={`control-btn ${showCode ? 'active' : ''}`} 
+                      <button
+                        className={`control-btn ${showCode ? 'active' : ''}`}
                         title="View Code"
                         onClick={() => setShowCode(!showCode)}
                       >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                          <polyline points="16,18 22,12 16,6" stroke="currentColor" strokeWidth="2"/>
-                          <polyline points="8,6 2,12 8,18" stroke="currentColor" strokeWidth="2"/>
+                          <polyline points="16,18 22,12 16,6" stroke="currentColor" strokeWidth="2" />
+                          <polyline points="8,6 2,12 8,18" stroke="currentColor" strokeWidth="2" />
                         </svg>
                       </button>
                       <button className="control-btn" title="Download">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" strokeWidth="2"/>
-                          <polyline points="7,10 12,15 17,10" stroke="currentColor" strokeWidth="2"/>
-                          <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" strokeWidth="2"/>
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" strokeWidth="2" />
+                          <polyline points="7,10 12,15 17,10" stroke="currentColor" strokeWidth="2" />
+                          <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" strokeWidth="2" />
                         </svg>
                       </button>
                     </div>
